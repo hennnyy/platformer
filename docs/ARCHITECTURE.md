@@ -637,5 +637,6 @@ PlayerState = Jump
 2. [`PLAYER_MOVEMENT.md`](./PLAYER_MOVEMENT.md): 이동 수식, 상태 전환표, 초기 튜닝 값 (최소 MVP 기준 완료)
 3. `LEVEL_GUIDE.md`: 타일 크기, 점프 거리, 카메라 경계, 체크포인트 간격
 4. `CONTENT_PIPELINE.md`: 스프라이트, 애니메이션, 오디오의 이름과 임포트 규칙
+5. [`NEXT_STEPS.md`](./NEXT_STEPS.md): MVP 잔여 검증, 경사로 구현 순서, 이후 확장 계획
 
 최소 MVP 구현은 [`MVP_SCOPE.md`](./MVP_SCOPE.md)의 브라우저 구조와 [`PLAYER_MOVEMENT.md`](./PLAYER_MOVEMENT.md)의 JavaScript 물리 규칙을 따른다.

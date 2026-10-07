@@ -22,9 +22,10 @@
 - 가변 높이 점프
 - 코요테 타임과 점프 입력 버퍼
 - 사각형 지형 충돌
+- 양방향 직선 경사로와 경사면 충돌
 - 낙사 리스폰
 - 카메라 추적
 - 도착점과 클리어 화면
 - 모바일 반응형 화면과 멀티터치 조작
 
-상세 설계는 [최소 MVP 범위](./docs/MVP_SCOPE.md), [플레이어 이동 설계](./docs/PLAYER_MOVEMENT.md), [모바일 조작 코드 안내](./docs/MOBILE_GAME_GUIDE.md)에서 확인할 수 있습니다.
+상세 설계는 [최소 MVP 범위](./docs/MVP_SCOPE.md), [플레이어 이동 설계](./docs/PLAYER_MOVEMENT.md), [모바일 조작 코드 안내](./docs/MOBILE_GAME_GUIDE.md), [다음 진행 계획](./docs/NEXT_STEPS.md)에서 확인할 수 있습니다.

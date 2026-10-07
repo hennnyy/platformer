@@ -16,6 +16,10 @@ const FIXED_DT = 1 / 60;
 // 탭 복귀 시 밀린 시간을 한꺼번에 처리하는 현상을 막는 최대 프레임 시간이다.
 const MAX_FRAME_TIME = 0.25;
 
+// 접지 중 경사면을 따라갈 수 있는 한 프레임의 최대 높이 차이다.
+// 현재 최대 이동 속도와 경사도보다 여유 있게 두되, 멀리 있는 경사로로 순간 이동하지 않게 제한한다.
+const SLOPE_SNAP_DISTANCE = 14;
+
 // 플레이어 조작감을 결정하는 물리 상수 모음이다. Object.freeze로 실행 중 변경을 막는다.
 const PHYSICS = Object.freeze({
   maxRunSpeed: 260, // 최대 수평 속도(px/s)
@@ -71,6 +75,14 @@ const LEVEL = Object.freeze({
     Object.freeze({ x: 2710, y: 590, width: 190, height: 34 }),
     Object.freeze({ x: 2980, y: 650, width: 500, height: 120 }),
     Object.freeze({ x: 3130, y: 555, width: 110, height: 30 }),
+  ]),
+
+  // 충돌 가능한 직선 경사면이다. 두 끝점을 잇는 선 아래쪽을 채워진 지형으로 취급한다.
+  slopes: Object.freeze([
+    // 오른쪽으로 갈수록 높아져 첫 지면과 낮은 발판을 연결한다.
+    Object.freeze({ x1: 520, y1: 650, x2: 620, y2: 600 }),
+    // 오른쪽으로 갈수록 낮아져 높은 발판과 다음 지면을 연결한다.
+    Object.freeze({ x1: 1050, y1: 540, x2: 1130, y2: 650 }),
   ]),
 });
 
@@ -132,6 +144,54 @@ function overlaps(a, b) {
     a.y + a.height > b.y
   );
 }
+
+/** 경사로의 왼쪽·오른쪽 끝점을 정렬해 방향과 관계없이 계산할 수 있게 한다. */
+function getOrderedSlope(slope) {
+  if (slope.x1 <= slope.x2) {
+    return {
+      leftX: slope.x1,
+      leftY: slope.y1,
+      rightX: slope.x2,
+      rightY: slope.y2,
+    };
+  }
+
+  return {
+    leftX: slope.x2,
+    leftY: slope.y2,
+    rightX: slope.x1,
+    rightY: slope.y1,
+  };
+}
+
+/** 지정한 X 좌표가 경사로 안에 있으면 표면 Y 좌표를, 아니면 null을 반환한다. */
+function getSlopeYAtX(slope, x) {
+  const ordered = getOrderedSlope(slope);
+  const width = ordered.rightX - ordered.leftX;
+
+  // 세로선은 바닥 경사로 계산에 사용할 수 없으며, 선분 밖의 X 좌표도 제외한다.
+  if (width <= 0 || x < ordered.leftX || x > ordered.rightX) return null;
+
+  const amount = (x - ordered.leftX) / width;
+  return lerp(ordered.leftY, ordered.rightY, amount);
+}
+
+/** 잘못된 경사로 데이터가 조용히 충돌 오류를 만들지 않도록 시작 시 좌표를 검사한다. */
+function validateSlopes(slopes) {
+  for (const [index, slope] of slopes.entries()) {
+    const coordinates = [slope.x1, slope.y1, slope.x2, slope.y2];
+    const hasInvalidCoordinate = coordinates.some((value) => !Number.isFinite(value));
+    const hasNoHorizontalLength = slope.x1 === slope.x2;
+    const hasNoVerticalHeight = slope.y1 === slope.y2;
+
+    if (hasInvalidCoordinate || hasNoHorizontalLength || hasNoVerticalHeight) {
+      throw new Error(`LEVEL.slopes[${index}]의 좌표가 올바르지 않습니다.`);
+    }
+  }
+}
+
+// 게임 루프를 시작하기 전에 레벨의 모든 경사로 데이터가 계산 가능한지 확인한다.
+validateSlopes(LEVEL.slopes);
 
 /**
  * CanvasRenderingContext2D.roundRect() 없이 둥근 사각형을 채운다.
@@ -404,6 +464,10 @@ class Player {
     // 바닥에 닿아 있는지 나타내는 충돌 결과다.
     this.grounded = false;
 
+    // 현재 접지한 표면 종류와 경사면 접촉점을 디버그 표시에 사용한다.
+    this.groundType = "none";
+    this.slopeContact = null;
+
     // 관대한 점프 조작을 위한 남은 허용 시간이다.
     this.coyoteTimer = 0;
     this.jumpBufferTimer = 0;
@@ -422,7 +486,7 @@ class Player {
   }
 
   /** 입력을 속도로 변환하고 중력과 충돌을 적용하는 고정 물리 업데이트다. */
-  update(input, platforms, dt) {
+  update(input, platforms, slopes, dt) {
     // 렌더링 보간에 사용하도록 이동 전 위치를 보관한다.
     this.previousX = this.x;
     this.previousY = this.y;
@@ -480,19 +544,31 @@ class Player {
       PHYSICS.maxFallSpeed,
     );
 
-    this.moveAndCollide(platforms, dt);
+    this.moveAndCollide(platforms, slopes, dt);
   }
 
   /**
    * X축과 Y축을 따로 이동시킨 뒤 겹침을 되돌리는 AABB 충돌 처리다.
    * 축을 분리하면 벽 충돌과 바닥 충돌을 단순하게 구분할 수 있다.
    */
-  moveAndCollide(platforms, dt) {
+  moveAndCollide(platforms, slopes, dt) {
+    // 이전 프레임의 접지 상태는 내리막 경사면을 자연스럽게 따라갈 때 사용한다.
+    const wasGrounded = this.grounded;
+
     // 먼저 X축으로 이동한 뒤 벽과 겹친 부분을 보정한다.
     this.x += this.velocityX * dt;
 
+    // 접지 상태로 이동 중이면 새 중심점의 경사 높이를 먼저 적용한다.
+    // 오르막 끝의 사각형 발판 옆면에 플레이어가 걸리는 현상을 예방한다.
+    if (wasGrounded && this.velocityY >= 0) {
+      this.followNearbySlope(slopes);
+    }
+
     for (const platform of platforms) {
       if (!overlaps(this, platform)) continue;
+
+      // 경사로 끝점과 이어진 발판의 옆면은 바닥 전환 구간이므로 벽으로 처리하지 않는다.
+      if (wasGrounded && this.isSlopePlatformTransition(platform, slopes)) continue;
 
       if (this.velocityX > 0) {
         this.x = platform.x - this.width;
@@ -505,6 +581,12 @@ class Player {
 
     // 다음으로 Y축을 이동한다. 이번 프레임에 바닥 충돌이 확인되면 다시 true가 된다.
     this.grounded = false;
+    this.groundType = "none";
+    this.slopeContact = null;
+
+    // 경사면을 위에서 통과했는지 판정할 때 사용할 이동 전 발 위치와 낙하 속도다.
+    const bottomBeforeVerticalMove = this.y + this.height;
+    const verticalVelocity = this.velocityY;
     this.y += this.velocityY * dt;
 
     for (const platform of platforms) {
@@ -513,12 +595,108 @@ class Player {
       if (this.velocityY > 0) {
         this.y = platform.y - this.height;
         this.grounded = true;
+        this.groundType = "platform";
       } else if (this.velocityY < 0) {
         this.y = platform.y + platform.height;
       }
 
       this.velocityY = 0;
     }
+
+    // 사각형 바닥에 먼저 착지하지 않았다면 위에서 통과한 경사면에 착지시킨다.
+    if (!this.grounded && verticalVelocity >= 0) {
+      this.landOnSlope(slopes, bottomBeforeVerticalMove);
+    }
+  }
+
+  /** 현재 접촉이 경사로와 사각형 발판의 연결부에서 생긴 옆면 충돌인지 확인한다. */
+  isSlopePlatformTransition(platform, slopes) {
+    const centerX = this.x + this.width / 2;
+    const currentBottom = this.y + this.height;
+    const epsilon = 0.01;
+
+    for (const slope of slopes) {
+      const ordered = getOrderedSlope(slope);
+
+      // 경사로 끝점과 발판 윗면 모서리가 같은 좌표에 연결되어야 한다.
+      const connectedToLeft = (
+        Math.abs(platform.x + platform.width - ordered.leftX) <= epsilon &&
+        Math.abs(platform.y - ordered.leftY) <= epsilon
+      );
+      const connectedToRight = (
+        Math.abs(platform.x - ordered.rightX) <= epsilon &&
+        Math.abs(platform.y - ordered.rightY) <= epsilon
+      );
+      if (!connectedToLeft && !connectedToRight) continue;
+
+      // 플레이어 중심이 선분에 들어가기 직전에도 앞쪽 모서리가 발판과 겹칠 수 있어
+      // 플레이어 반 너비만큼 검사 범위를 넓힌다.
+      if (
+        centerX < ordered.leftX - this.width / 2 ||
+        centerX > ordered.rightX + this.width / 2
+      ) continue;
+
+      const sampleX = clamp(centerX, ordered.leftX, ordered.rightX);
+      const surfaceY = getSlopeYAtX(slope, sampleX);
+      if (surfaceY !== null && Math.abs(surfaceY - currentBottom) <= SLOPE_SNAP_DISTANCE) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  /** 접지 상태에서 가까운 경사면을 찾아 플레이어 발 높이를 표면에 맞춘다. */
+  followNearbySlope(slopes) {
+    const centerX = this.x + this.width / 2;
+    const currentBottom = this.y + this.height;
+    let closest = null;
+
+    for (const slope of slopes) {
+      const surfaceY = getSlopeYAtX(slope, centerX);
+      if (surfaceY === null) continue;
+
+      const distance = Math.abs(surfaceY - currentBottom);
+      if (distance > SLOPE_SNAP_DISTANCE) continue;
+      if (!closest || distance < closest.distance) {
+        closest = { slope, surfaceY, distance };
+      }
+    }
+
+    if (!closest) return;
+
+    this.y = closest.surfaceY - this.height;
+    this.velocityY = 0;
+    this.grounded = true;
+    this.groundType = "slope";
+    this.slopeContact = { x: centerX, y: closest.surfaceY };
+  }
+
+  /** 낙하 중 플레이어의 발이 경사면을 통과하면 가장 위쪽 표면에 착지시킨다. */
+  landOnSlope(slopes, bottomBeforeVerticalMove) {
+    const centerX = this.x + this.width / 2;
+    const currentBottom = this.y + this.height;
+    let landing = null;
+
+    for (const slope of slopes) {
+      const surfaceY = getSlopeYAtX(slope, centerX);
+      if (surfaceY === null) continue;
+
+      // 이전 발 위치가 표면 위이고 현재 발 위치가 표면에 닿거나 통과한 경우만 착지한다.
+      // 따라서 경사로 아래에서 점프할 때 표면 위로 순간 이동하지 않는다.
+      if (bottomBeforeVerticalMove > surfaceY + 0.5 || currentBottom < surfaceY) continue;
+      if (!landing || surfaceY < landing.surfaceY) {
+        landing = { slope, surfaceY };
+      }
+    }
+
+    if (!landing) return;
+
+    this.y = landing.surfaceY - this.height;
+    this.velocityY = 0;
+    this.grounded = true;
+    this.groundType = "slope";
+    this.slopeContact = { x: centerX, y: landing.surfaceY };
   }
 }
 
@@ -628,7 +806,7 @@ class Game {
       this.elapsedMilliseconds += dt * 1000;
 
       // 현재 입력과 스테이지 발판을 이용해 플레이어 물리를 갱신한다.
-      this.player.update(this.input, LEVEL.platforms, dt);
+      this.player.update(this.input, LEVEL.platforms, LEVEL.slopes, dt);
 
       // 플레이어가 화면 아래로 떨어졌는지, 도착점에 닿았는지 확인한다.
       if (this.player.y > LEVEL.deathY) {
@@ -793,6 +971,55 @@ class Game {
       }
     }
 
+    // 경사로 몸체를 선분 아래쪽까지 채워 기존 발판과 같은 흙 지형으로 표현한다.
+    for (const slope of LEVEL.slopes) {
+      const ordered = getOrderedSlope(slope);
+      const leftX = ordered.leftX - cameraX;
+      const rightX = ordered.rightX - cameraX;
+
+      context.fillStyle = COLORS.platformSide;
+      context.beginPath();
+      context.moveTo(leftX, ordered.leftY);
+      context.lineTo(rightX, ordered.rightY);
+      context.lineTo(rightX, VIEW_HEIGHT);
+      context.lineTo(leftX, VIEW_HEIGHT);
+      context.closePath();
+      context.fill();
+
+      // 실제 충돌 표면과 같은 선에 잔디색을 그려 경사 방향을 분명하게 보여준다.
+      context.strokeStyle = COLORS.grass;
+      context.lineWidth = 7;
+      context.lineCap = "round";
+      context.beginPath();
+      context.moveTo(leftX, ordered.leftY);
+      context.lineTo(rightX, ordered.rightY);
+      context.stroke();
+
+      // 디버그 모드에서는 충돌에 사용하는 정확한 선분을 밝은 색으로 겹쳐 표시한다.
+      if (this.debugVisible) {
+        context.strokeStyle = "#00e5ff";
+        context.lineWidth = 2;
+        context.beginPath();
+        context.moveTo(leftX, ordered.leftY);
+        context.lineTo(rightX, ordered.rightY);
+        context.stroke();
+      }
+    }
+
+    // 현재 플레이어가 경사면에 접지했다면 계산에 사용한 발 접촉점을 표시한다.
+    if (this.debugVisible && this.player.slopeContact) {
+      context.fillStyle = "#ff2d95";
+      context.beginPath();
+      context.arc(
+        this.player.slopeContact.x - cameraX,
+        this.player.slopeContact.y,
+        6,
+        0,
+        Math.PI * 2,
+      );
+      context.fill();
+    }
+
     this.drawWorldLabel(115, 620, "START", cameraX);
     this.drawWorldLabel(670, 567, "짧게 / 길게 점프", cameraX);
     this.drawWorldLabel(1720, 557, "떨어져도 바로 재시작", cameraX);
@@ -906,6 +1133,7 @@ class Game {
       `position    ${this.player.x.toFixed(2)}, ${this.player.y.toFixed(2)}`,
       `velocity    ${this.player.velocityX.toFixed(2)}, ${this.player.velocityY.toFixed(2)}`,
       `grounded    ${this.player.grounded}`,
+      `ground type ${this.player.groundType}`,
       `coyote      ${this.player.coyoteTimer.toFixed(3)}`,
       `jump buffer ${this.player.jumpBufferTimer.toFixed(3)}`,
       `camera x    ${this.cameraX.toFixed(2)}`,
