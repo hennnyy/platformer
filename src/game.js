@@ -39,7 +39,7 @@ const COLORS = Object.freeze({
   farHill: "#9dcdbb", // 멀리 있는 산
   nearHill: "#5fa78e", // 가까이 있는 산
   platform: "#5b3a00", // 발판 윗면
-  platformSide: "#5b3a00", // 발판 몸체
+  platformSide: "#5b0000", // 발판 몸체
   grass: "#007b35", // 발판 위 잔디 선
   player: "#ffca5c", // 플레이어 기본 색
   playerShade: "#e7953c", // 플레이어 그림자와 다리
