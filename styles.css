@@ -1,0 +1,414 @@
+:root {
+  color-scheme: dark;
+  font-family:
+    Inter, Pretendard, "Noto Sans KR", system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", sans-serif;
+  background: #09111f;
+  color: #f4f7fb;
+  font-synthesis: none;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  min-width: 320px;
+  min-height: 100%;
+  margin: 0;
+}
+
+body {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  overflow-x: hidden;
+  overscroll-behavior: none;
+  background:
+    radial-gradient(circle at 15% 12%, rgb(36 79 117 / 45%), transparent 32rem),
+    radial-gradient(circle at 88% 88%, rgb(47 129 113 / 24%), transparent 34rem),
+    #09111f;
+}
+
+button,
+kbd {
+  font: inherit;
+}
+
+.page-shell {
+  width: min(96vw, 1320px);
+  padding: 22px 0 28px;
+}
+
+.game-header,
+.game-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.game-header {
+  margin-bottom: 14px;
+}
+
+.game-header h1 {
+  margin: 2px 0 0;
+  font-size: clamp(1.4rem, 3vw, 2.2rem);
+  letter-spacing: -0.04em;
+}
+
+.eyebrow {
+  margin: 0;
+  color: #68e0c1;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.17em;
+}
+
+.status-pill {
+  min-width: 92px;
+  padding: 8px 14px;
+  border: 1px solid rgb(104 224 193 / 45%);
+  border-radius: 999px;
+  color: #9af1d9;
+  background: rgb(31 93 83 / 30%);
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-align: center;
+  letter-spacing: 0.12em;
+}
+
+.status-pill.is-clear {
+  border-color: rgb(255 218 106 / 55%);
+  color: #ffe88d;
+  background: rgb(112 81 17 / 42%);
+}
+
+.game-frame {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgb(255 255 255 / 13%);
+  border-radius: 18px;
+  background: #bce9ff;
+  box-shadow:
+    0 24px 80px rgb(0 0 0 / 42%),
+    0 0 0 1px rgb(104 224 193 / 8%) inset;
+}
+
+#game {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 9;
+  outline: none;
+  image-rendering: auto;
+  touch-action: none;
+}
+
+#game:focus-visible {
+  box-shadow: 0 0 0 3px #68e0c1 inset;
+}
+
+.instructions {
+  position: absolute;
+  left: 18px;
+  top: 18px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  max-width: calc(100% - 36px);
+  padding: 9px 12px;
+  border: 1px solid rgb(255 255 255 / 32%);
+  border-radius: 10px;
+  color: #f8fbff;
+  background: rgb(9 17 31 / 72%);
+  backdrop-filter: blur(8px);
+  font-size: clamp(0.62rem, 1.2vw, 0.82rem);
+  pointer-events: none;
+}
+
+.instructions span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+kbd {
+  min-width: 22px;
+  padding: 2px 6px;
+  border: 1px solid rgb(255 255 255 / 35%);
+  border-bottom-width: 2px;
+  border-radius: 5px;
+  color: #fff;
+  background: rgb(255 255 255 / 13%);
+  font-size: 0.78em;
+  font-weight: 800;
+  text-align: center;
+}
+
+.debug-panel {
+  position: absolute;
+  right: 16px;
+  top: 16px;
+  min-width: 220px;
+  margin: 0;
+  padding: 12px;
+  border: 1px solid rgb(104 224 193 / 42%);
+  border-radius: 9px;
+  color: #b7ffe9;
+  background: rgb(5 15 24 / 82%);
+  font: 12px/1.55 ui-monospace, SFMono-Regular, Consolas, monospace;
+  pointer-events: none;
+}
+
+/*
+ * 모바일 조작부는 기본적으로 숨긴다. 아래의 coarse pointer 미디어 쿼리에서
+ * 터치 입력 장치일 때만 표시하므로 데스크톱 키보드 UI와 겹치지 않는다.
+ */
+.mobile-controls {
+  display: none;
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  align-items: end;
+  justify-content: space-between;
+  padding:
+    18px
+    max(18px, env(safe-area-inset-right))
+    max(18px, env(safe-area-inset-bottom))
+    max(18px, env(safe-area-inset-left));
+  pointer-events: none;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/* 왼쪽과 오른쪽 버튼을 한 손으로 누를 수 있게 묶는다. */
+.mobile-direction {
+  display: flex;
+  gap: 12px;
+  pointer-events: auto;
+}
+
+/* 모든 터치 버튼이 공유하는 크기와 눌림 피드백이다. */
+.touch-button {
+  display: grid;
+  width: clamp(56px, 14vw, 84px);
+  height: clamp(56px, 14vw, 84px);
+  place-items: center;
+  padding: 0;
+  border: 2px solid rgb(255 255 255 / 52%);
+  border-radius: 50%;
+  color: #fff;
+  background: rgb(9 17 31 / 66%);
+  box-shadow:
+    0 6px 18px rgb(0 0 0 / 22%),
+    0 0 0 1px rgb(255 255 255 / 10%) inset;
+  font-size: clamp(1.25rem, 5vw, 2rem);
+  font-weight: 900;
+  line-height: 1;
+  pointer-events: auto;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* :active뿐 아니라 포인터 캡처 중에도 JavaScript가 같은 스타일을 유지한다. */
+.touch-button:active,
+.touch-button.is-pressed {
+  border-color: #9af1d9;
+  background: rgb(31 111 94 / 82%);
+  transform: scale(0.92);
+}
+
+.touch-jump {
+  color: #07140f;
+  background: rgb(104 224 193 / 88%);
+  font-size: clamp(0.72rem, 3vw, 1rem);
+  letter-spacing: 0.05em;
+}
+
+/* 재시작은 오조작을 줄이기 위해 이동·점프 버튼보다 작고 위에 배치한다. */
+.touch-restart {
+  position: absolute;
+  right: max(18px, env(safe-area-inset-right));
+  top: max(18px, env(safe-area-inset-top));
+  width: clamp(42px, 10vw, 58px);
+  height: clamp(42px, 10vw, 58px);
+  font-size: clamp(1rem, 4vw, 1.5rem);
+}
+
+.clear-screen {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgb(5 15 24 / 58%);
+  backdrop-filter: blur(5px);
+  z-index: 10;
+}
+
+.clear-screen[hidden] {
+  display: none;
+}
+
+.clear-card {
+  width: min(92%, 420px);
+  padding: 30px;
+  border: 1px solid rgb(255 255 255 / 24%);
+  border-radius: 18px;
+  background: linear-gradient(145deg, rgb(17 35 49 / 95%), rgb(9 20 34 / 95%));
+  box-shadow: 0 24px 80px rgb(0 0 0 / 45%);
+  text-align: center;
+}
+
+.clear-kicker {
+  margin: 0;
+  color: #68e0c1;
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.18em;
+}
+
+.clear-card h2 {
+  margin: 8px 0 4px;
+  font-size: clamp(1.8rem, 5vw, 2.8rem);
+  letter-spacing: -0.04em;
+}
+
+.clear-card p {
+  margin: 0 0 22px;
+  color: #c6d5df;
+}
+
+.clear-card button {
+  width: 100%;
+  padding: 12px 18px;
+  border: 0;
+  border-radius: 10px;
+  color: #07140f;
+  background: #68e0c1;
+  font-weight: 900;
+  cursor: pointer;
+  transition: transform 120ms ease, background 120ms ease;
+}
+
+.clear-card button:hover {
+  background: #87edd3;
+  transform: translateY(-1px);
+}
+
+.clear-card button:focus-visible {
+  outline: 3px solid #fff;
+  outline-offset: 3px;
+}
+
+.clear-card small {
+  display: block;
+  margin-top: 14px;
+  color: #8fa6b5;
+}
+
+.game-footer {
+  padding: 12px 4px 0;
+  color: #9fb1c1;
+  font-size: 0.82rem;
+}
+
+#run-time {
+  color: #d9e6ed;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+@media (max-width: 720px) {
+  .page-shell {
+    width: 100vw;
+    padding: 14px 10px 18px;
+  }
+
+  .game-header {
+    padding: 0 2px;
+  }
+
+  .game-frame {
+    border-radius: 12px;
+  }
+
+  .instructions {
+    left: 8px;
+    top: 8px;
+    gap: 5px 9px;
+    max-width: calc(100% - 16px);
+    padding: 6px 8px;
+  }
+
+  .instructions span:nth-child(2),
+  .instructions span:nth-child(5) {
+    display: none;
+  }
+
+  .game-footer {
+    align-items: flex-start;
+  }
+}
+
+/* 손가락 터치를 주 입력으로 사용하는 모바일·태블릿에서 조작 버튼을 표시한다. */
+@media (hover: none), (pointer: coarse) {
+  body {
+    /* 모바일 주소창 변화에도 화면을 채우도록 동적 뷰포트 높이를 사용한다. */
+    min-height: 100dvh;
+  }
+
+  .instructions {
+    display: none;
+  }
+
+  .mobile-controls {
+    display: flex;
+  }
+
+  .game-footer {
+    padding-inline:
+      max(4px, env(safe-area-inset-left))
+      max(4px, env(safe-area-inset-right));
+  }
+}
+
+/* 가로 화면 높이가 낮은 휴대폰에서는 헤더를 줄여 게임 영역을 더 확보한다. */
+@media (hover: none) and (orientation: landscape) and (max-height: 560px) {
+  body {
+    display: block;
+  }
+
+  .page-shell {
+    width: 100vw;
+    padding: 4px max(6px, env(safe-area-inset-right)) 4px max(6px, env(safe-area-inset-left));
+  }
+
+  .game-header,
+  .game-footer {
+    display: none;
+  }
+
+  .game-frame {
+    /* 화면 높이를 기준으로 16:9 너비를 계산해 Canvas가 찌그러지지 않게 한다. */
+    width: min(100%, calc((100dvh - 8px) * 16 / 9));
+    margin-inline: auto;
+    border-radius: 10px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}
