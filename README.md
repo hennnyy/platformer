@@ -27,4 +27,4 @@
 - 도착점과 클리어 화면
 - 모바일 반응형 화면과 멀티터치 조작
 
-상세 설계는 [최소 MVP 범위](./docs/MVP_SCOPE.md)와 [플레이어 이동 설계](./docs/PLAYER_MOVEMENT.md)에서 확인할 수 있습니다.
+상세 설계는 [최소 MVP 범위](./docs/MVP_SCOPE.md), [플레이어 이동 설계](./docs/PLAYER_MOVEMENT.md), [모바일 조작 코드 안내](./docs/MOBILE_GAME_GUIDE.md)에서 확인할 수 있습니다.

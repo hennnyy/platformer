@@ -232,7 +232,7 @@ kbd {
   letter-spacing: 0.05em;
 }
 
-/* 재시작은 오조작을 줄이기 위해 이동·점프 버튼보다 작고 위에 배치한다. */
+/* 재시작은 오조작을 줄이기 위해 이동·점프 버튼보다 작게 표시한다. */
 .touch-restart {
   position: absolute;
   right: max(18px, env(safe-area-inset-right));
@@ -371,6 +371,25 @@ kbd {
 
   .mobile-controls {
     display: flex;
+    /* Canvas 위의 absolute 배치를 해제해 조작 바가 게임 화면 아래 공간을 차지하게 한다. */
+    position: relative;
+    inset: auto;
+    z-index: 5;
+    align-items: center;
+    min-height: 80px;
+    padding:
+      12px
+      max(14px, env(safe-area-inset-right))
+      max(12px, env(safe-area-inset-bottom))
+      max(14px, env(safe-area-inset-left));
+    border-top: 1px solid rgb(255 255 255 / 12%);
+    background: linear-gradient(180deg, #122738, #091521);
+  }
+
+  /* 조작 바 안에서 이동·재시작·점프 버튼이 한 줄에 배치되도록 한다. */
+  .touch-restart {
+    position: static;
+    inset: auto;
   }
 
   .game-footer {
@@ -397,10 +416,36 @@ kbd {
   }
 
   .game-frame {
-    /* 화면 높이를 기준으로 16:9 너비를 계산해 Canvas가 찌그러지지 않게 한다. */
-    width: min(100%, calc((100dvh - 8px) * 16 / 9));
+    /* 조작 바 높이를 뺀 나머지 공간으로 16:9 Canvas 너비를 계산한다. */
+    width: min(100%, calc((100dvh - 84px) * 16 / 9));
     margin-inline: auto;
     border-radius: 10px;
+  }
+
+  .mobile-controls {
+    min-height: 76px;
+    padding:
+      6px
+      max(12px, env(safe-area-inset-right))
+      max(6px, env(safe-area-inset-bottom))
+      max(12px, env(safe-area-inset-left));
+  }
+
+  /* 낮은 가로 화면에서는 버튼을 줄여 게임 화면 높이를 최대한 확보한다. */
+  .touch-button {
+    width: 64px;
+    height: 64px;
+    font-size: 1.5rem;
+  }
+
+  .touch-restart {
+    width: 48px;
+    height: 48px;
+    font-size: 1.2rem;
+  }
+
+  .touch-jump {
+    font-size: 0.82rem;
   }
 }
 
