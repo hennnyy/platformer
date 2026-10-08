@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 
     <title>RETRO TETRIS</title>
 
@@ -76,6 +76,10 @@
             box-shadow:
                 0 0 0 4px #090909,
                 0 12px 40px rgba(0, 0, 0, 0.7);
+
+            touch-action: none;
+            user-select: none;
+            -webkit-user-select: none;
         }
 
 
@@ -213,6 +217,11 @@
             font-size: 9px;
 
             cursor: pointer;
+
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
         }
 
 
@@ -593,6 +602,19 @@
         let dropTimer = 0;
 
         let lastTime = 0;
+
+        let totalPlayTime = 0;
+
+        // 꾹 누르기(DAS: Delayed Auto Shift)
+        let dasDirection = null;
+
+        let dasTimer = 0;
+
+        let arrTimer = 0;
+
+        const DAS_DELAY = 170; // 첫 반복까지 지연 (ms)
+
+        const ARR_INTERVAL = 50; // 반복 이동 간격 (ms)
 
 
         // ========================================
@@ -1359,6 +1381,14 @@
 
             dropTimer = 0;
 
+            totalPlayTime = 0;
+
+            dasDirection = null;
+
+            dasTimer = 0;
+
+            arrTimer = 0;
+
 
             document.getElementById(
                 "status"
@@ -1434,17 +1464,27 @@
                 !gameOver
             ) {
 
+                totalPlayTime +=
+                    deltaTime;
+
                 dropTimer +=
                     deltaTime;
 
 
+                // 경과 시간(초)에 따라 점점 빨라짐 (30초마다 50ms 단축, 라인 클리어 시 추가 단축)
+                const elapsedSec =
+                    totalPlayTime / 1000;
+
                 const dropInterval =
                     Math.max(
-                        110,
-                        700 -
+                        100,
+                        800 -
+                        Math.floor(
+                            elapsedSec / 30
+                        ) * 50 -
                         Math.floor(
                             lines / 10
-                        ) * 45
+                        ) * 30
                     );
 
 
@@ -1454,6 +1494,52 @@
                 ) {
 
                     moveDown();
+
+                }
+
+
+                // DAS (꾹 누르고 있을 때 연속 이동)
+                if (dasDirection) {
+
+                    dasTimer +=
+                        deltaTime;
+
+                    if (
+                        dasTimer >=
+                        DAS_DELAY
+                    ) {
+
+                        arrTimer +=
+                            deltaTime;
+
+                        while (
+                            arrTimer >=
+                            ARR_INTERVAL
+                        ) {
+
+                            if (
+                                dasDirection ===
+                                "left"
+                            ) {
+                                moveLeft();
+                            } else if (
+                                dasDirection ===
+                                "right"
+                            ) {
+                                moveRight();
+                            } else if (
+                                dasDirection ===
+                                "down"
+                            ) {
+                                moveDown();
+                            }
+
+                            arrTimer -=
+                                ARR_INTERVAL;
+
+                        }
+
+                    }
 
                 }
 
@@ -1484,21 +1570,36 @@
 
                     case "ArrowLeft":
 
-                        moveLeft();
+                        if (dasDirection !== "left") {
+                            moveLeft();
+                            dasDirection = "left";
+                            dasTimer = 0;
+                            arrTimer = 0;
+                        }
 
                         break;
 
 
                     case "ArrowRight":
 
-                        moveRight();
+                        if (dasDirection !== "right") {
+                            moveRight();
+                            dasDirection = "right";
+                            dasTimer = 0;
+                            arrTimer = 0;
+                        }
 
                         break;
 
 
                     case "ArrowDown":
 
-                        moveDown();
+                        if (dasDirection !== "down") {
+                            moveDown();
+                            dasDirection = "down";
+                            dasTimer = 0;
+                            arrTimer = 0;
+                        }
 
                         break;
 
@@ -1533,9 +1634,68 @@
         );
 
 
+        document.addEventListener(
+            "keyup",
+            event => {
+
+                if (
+                    (event.key === "ArrowLeft" && dasDirection === "left") ||
+                    (event.key === "ArrowRight" && dasDirection === "right") ||
+                    (event.key === "ArrowDown" && dasDirection === "down")
+                ) {
+                    dasDirection = null;
+                    dasTimer = 0;
+                    arrTimer = 0;
+                }
+
+            }
+        );
+
+
         // ========================================
-        // 모바일 버튼
+        // 모바일 및 버튼 조작 (꾹 누르기 & 더블탭 확대 방지)
         // ========================================
+
+        function startAction(action) {
+
+            if (paused || gameOver) return;
+
+            if (action === "left") {
+                moveLeft();
+                dasDirection = "left";
+                dasTimer = 0;
+                arrTimer = 0;
+            } else if (action === "right") {
+                moveRight();
+                dasDirection = "right";
+                dasTimer = 0;
+                arrTimer = 0;
+            } else if (action === "down") {
+                moveDown();
+                dasDirection = "down";
+                dasTimer = 0;
+                arrTimer = 0;
+            } else if (action === "rotate") {
+                rotatePiece();
+            } else if (action === "drop") {
+                hardDrop();
+            }
+
+        }
+
+
+        function endAction(action) {
+
+            if (dasDirection === action) {
+                dasDirection = null;
+                dasTimer = 0;
+                arrTimer = 0;
+            }
+
+        }
+
+
+        let isTouchDevice = false;
 
         document
             .querySelectorAll(
@@ -1544,58 +1704,79 @@
             .forEach(
                 button => {
 
+                    const action =
+                        button.dataset.action;
+
+
+                    // 터치 이벤트: e.preventDefault()로 더블탭 줌 차단
                     button.addEventListener(
-                        "click",
+                        "touchstart",
+                        e => {
+                            isTouchDevice = true;
+                            if (e.cancelable) e.preventDefault();
+                            startAction(action);
+                        },
+                        { passive: false }
+                    );
+
+                    button.addEventListener(
+                        "touchend",
+                        e => {
+                            if (e.cancelable) e.preventDefault();
+                            endAction(action);
+                        },
+                        { passive: false }
+                    );
+
+                    button.addEventListener(
+                        "touchcancel",
+                        e => {
+                            if (e.cancelable) e.preventDefault();
+                            endAction(action);
+                        },
+                        { passive: false }
+                    );
+
+
+                    // 마우스 이벤트 (PC 환경 지원)
+                    button.addEventListener(
+                        "mousedown",
+                        e => {
+                            if (isTouchDevice) return;
+                            if (e.button === 0) {
+                                startAction(action);
+                            }
+                        }
+                    );
+
+                    button.addEventListener(
+                        "mouseup",
                         () => {
+                            if (isTouchDevice) return;
+                            endAction(action);
+                        }
+                    );
 
-                            const action =
-                                button.dataset.action;
-
-
-                            if (
-                                action ===
-                                "left"
-                            ) {
-                                moveLeft();
-                            }
-
-
-                            if (
-                                action ===
-                                "right"
-                            ) {
-                                moveRight();
-                            }
-
-
-                            if (
-                                action ===
-                                "down"
-                            ) {
-                                moveDown();
-                            }
-
-
-                            if (
-                                action ===
-                                "rotate"
-                            ) {
-                                rotatePiece();
-                            }
-
-
-                            if (
-                                action ===
-                                "drop"
-                            ) {
-                                hardDrop();
-                            }
-
+                    button.addEventListener(
+                        "mouseleave",
+                        () => {
+                            if (isTouchDevice) return;
+                            endAction(action);
                         }
                     );
 
                 }
             );
+
+
+        // 게임 내 더블탭 화면 확대 방지
+        document.addEventListener(
+            "dblclick",
+            e => {
+                e.preventDefault();
+            },
+            { passive: false }
+        );
 
 
         // ========================================
