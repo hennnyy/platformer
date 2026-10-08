@@ -55,12 +55,49 @@
                     transparent 4px);
 
             opacity: 0.45;
+            z-index: 5;
+        }
+
+
+        /* 3000점 달성 햄스터 배경 */
+
+        .high-score-bg {
+            position: fixed;
+            inset: 0;
+
+            background-image: url('img_scorehigh.jpg');
+            background-repeat: no-repeat;
+            background-position: center;
+            background-size: contain;
+
+            opacity: 0;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .high-score-bg.animate {
+            animation: hamsterFade 10s ease-in-out forwards;
+        }
+
+        @keyframes hamsterFade {
+            0% {
+                opacity: 0;
+            }
+            50% {
+                opacity: 0.7;
+            }
+            100% {
+                opacity: 0;
+            }
         }
 
 
         /* 게임 전체 */
 
         .game {
+            position: relative;
+            z-index: 2;
+
             display: flex;
 
             gap: 24px;
@@ -69,7 +106,7 @@
 
             padding: 24px;
 
-            background: #171717;
+            background: rgba(23, 23, 23, 0.85);
 
             border: 4px solid #4b4b4b;
 
@@ -90,7 +127,7 @@
 
             padding: 8px;
 
-            background: #080808;
+            background: rgba(8, 8, 8, 0.85);
 
             border: 3px solid #555;
 
@@ -108,7 +145,7 @@
                 linear-gradient(90deg,
                     rgba(255, 255, 255, 0.025) 1px,
                     transparent 1px),
-                #050505;
+                rgba(5, 5, 5, 0.75);
 
             background-size:
                 30px 30px;
@@ -143,7 +180,7 @@
 
             margin-bottom: 14px;
 
-            background: #101010;
+            background: rgba(16, 16, 16, 0.85);
 
             border: 2px solid #444;
 
@@ -362,6 +399,8 @@
 
 <body>
 
+    <!-- 3000점 달성 시 햄스터 배경 -->
+    <div id="high-score-bg" class="high-score-bg"></div>
 
     <div class="game">
 
@@ -617,6 +656,8 @@
         const DAS_DELAY = 170; // 첫 반복까지 지연 (ms)
 
         const ARR_INTERVAL = 50; // 반복 이동 간격 (ms)
+
+        let hamsterBgTriggered = false; // 3000점 햄스터 배경 트리거 여부
 
 
         // ========================================
@@ -1352,6 +1393,18 @@
                 String(lines)
                     .padStart(3, "0");
 
+
+            // 3000점 이상 달성 시 햄스터 배경 애니메이션 (5초 페이드인, 5초 페이드아웃)
+            if (score >= 3000 && !hamsterBgTriggered) {
+                hamsterBgTriggered = true;
+                const bg = document.getElementById("high-score-bg");
+                if (bg) {
+                    bg.classList.remove("animate");
+                    void bg.offsetWidth; // 리플로우 강제하여 애니메이션 재시작 보장
+                    bg.classList.add("animate");
+                }
+            }
+
         }
 
 
@@ -1390,6 +1443,13 @@
             dasTimer = 0;
 
             arrTimer = 0;
+
+            hamsterBgTriggered = false;
+
+            const bg = document.getElementById("high-score-bg");
+            if (bg) {
+                bg.classList.remove("animate");
+            }
 
 
             document.getElementById(
