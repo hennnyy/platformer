@@ -59,45 +59,12 @@
         }
 
 
-        /* 3000점 달성 햄스터 배경 */
 
-        .high-score-bg {
-            position: fixed;
-            inset: 0;
-
-            background-image: url('img_scorehigh.jpg');
-            background-repeat: no-repeat;
-            background-position: center;
-            background-size: contain;
-
-            opacity: 0;
-            pointer-events: none;
-            z-index: 1;
-        }
-
-        .high-score-bg.animate {
-            animation: hamsterFade 10s ease-in-out forwards;
-        }
-
-        @keyframes hamsterFade {
-            0% {
-                opacity: 0;
-            }
-            50% {
-                opacity: 0.7;
-            }
-            100% {
-                opacity: 0;
-            }
-        }
 
 
         /* 게임 전체 */
 
         .game {
-            position: relative;
-            z-index: 2;
-
             display: flex;
 
             gap: 24px;
@@ -106,7 +73,7 @@
 
             padding: 24px;
 
-            background: rgba(23, 23, 23, 0.85);
+            background: #171717;
 
             border: 4px solid #4b4b4b;
 
@@ -127,7 +94,7 @@
 
             padding: 8px;
 
-            background: rgba(8, 8, 8, 0.85);
+            background: #080808;
 
             border: 3px solid #555;
 
@@ -136,21 +103,96 @@
         }
 
 
-        #board {
-            display: block;
+        /* 게임판 프레임 */
+
+        .board-frame {
+            position: relative;
+
+            width: 300px;
+            height: 600px;
+
+            margin: 0 auto;
+
+            background: #050505;
+
+            overflow: hidden;
+        }
+
+
+        /* 1. 배경 격자선 (z-index: 1) */
+
+        .board-bg {
+            position: absolute;
+            inset: 0;
 
             background:
                 linear-gradient(rgba(255, 255, 255, 0.025) 1px,
                     transparent 1px),
                 linear-gradient(90deg,
                     rgba(255, 255, 255, 0.025) 1px,
-                    transparent 1px),
-                rgba(5, 5, 5, 0.75);
+                    transparent 1px);
 
             background-size:
                 30px 30px;
 
+            pointer-events: none;
+
+            z-index: 1;
+        }
+
+
+        /* 2. 햄스터 이스터에그 (z-index: 2: 배경보다 위, 게임 블록보다 아래) */
+
+        .hamster-easter-egg {
+            position: absolute;
+
+            left: 0;
+            top: 150px;
+
+            width: 300px;
+            height: 300px;
+
+            object-fit: contain;
+
+            opacity: 0;
+
+            pointer-events: none;
+
+            z-index: 2;
+        }
+
+        .hamster-easter-egg.animate {
+            animation: hamsterFadeInOut 10s ease-in-out forwards;
+        }
+
+        @keyframes hamsterFadeInOut {
+            0% {
+                opacity: 0;
+            }
+
+            50% {
+                opacity: 0.7;
+            }
+
+            100% {
+                opacity: 0;
+            }
+        }
+
+
+        /* 3. 게임 블록 캔버스 (z-index: 3: 햄스터 위에서 블록 렌더링) */
+
+        #board {
+            position: absolute;
+            inset: 0;
+
+            display: block;
+
+            background: transparent;
+
             image-rendering: pixelated;
+
+            z-index: 3;
         }
 
 
@@ -180,7 +222,7 @@
 
             margin-bottom: 14px;
 
-            background: rgba(16, 16, 16, 0.85);
+            background: #101010;
 
             border: 2px solid #444;
 
@@ -355,14 +397,21 @@
         }
 
 
-        /* 모바일 */
+        /* 모바일: 100dvh 맞춤 반응형 레이아웃 (스크롤 없음 & NEXT 블록 상단 배치) */
 
         @media (max-width: 650px) {
 
             body {
-                align-items: flex-start;
+                height: 100dvh;
+                max-height: 100dvh;
+                overflow: hidden;
 
-                padding: 15px;
+                padding: 4px;
+                box-sizing: border-box;
+
+                display: flex;
+                align-items: center;
+                justify-content: center;
             }
 
 
@@ -370,26 +419,157 @@
                 flex-direction: column;
 
                 align-items: center;
+                justify-content: center;
 
                 width: 100%;
+                max-width: 360px;
+                height: 100%;
+                max-height: 100dvh;
 
-                padding: 15px;
+                padding: 6px;
+                gap: 4px;
+                box-sizing: border-box;
+
+                border-width: 3px;
+                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.7);
             }
 
+
+            /* 1. 상단 정보 HUD (보드판 위로 배치) */
 
             .side {
-                width: 300px;
+                order: -1;
+                width: 100%;
+                margin: 0;
             }
-
 
             .title {
-                text-align: center;
+                display: none;
+            }
+
+            .side-content {
+                display: flex;
+                flex-direction: row;
+                align-items: stretch;
+                justify-content: space-between;
+                gap: 4px;
+                width: 100%;
+            }
+
+            .side-content .panel {
+                margin-bottom: 0;
+                padding: 4px;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+                min-width: 0;
+                border-width: 2px;
+            }
+
+            .score-panel {
+                flex: 1.1;
+            }
+
+            /* 다음 블록: 상단 중앙에 실시간 표시 */
+            .next-panel {
+                flex: 0 0 auto;
+                padding: 3px 6px !important;
+            }
+
+            .next-panel #next {
+                width: 40px;
+                height: 40px;
+                margin: 2px auto 0;
+                border-width: 1px;
+            }
+
+            .lines-panel {
+                flex: 0.9;
+            }
+
+            .actions-panel {
+                flex: 1.1;
+                padding: 3px 4px !important;
+            }
+
+            .actions-panel .status {
+                margin-top: 0;
+                min-height: auto;
+                font-size: 6.5px;
+                line-height: 1.2;
+            }
+
+            .actions-panel button {
+                min-height: 18px;
+                margin-top: 2px;
+                padding: 2px 3px;
+                font-size: 6px;
+            }
+
+            .actions-panel .help {
+                display: none;
+            }
+
+            .label {
+                font-size: 6px;
+                margin-bottom: 2px;
+            }
+
+            .value {
+                font-size: 10px;
             }
 
 
+            /* 2. 게임판: 각 디바이스 높이에 맞춰 자동 스케일링 (위아래 짤림 방지) */
+
+            .game-board {
+                padding: 4px;
+                border-width: 2px;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                width: 100%;
+                box-sizing: border-box;
+            }
+
+            .board-frame {
+                /* 상단 HUD(~55px) + 컨트롤 버튼(~95px) + 패딩/여백 제외 후 1:2 비율 자동 맞춤 */
+                height: min(510px, calc(100dvh - 190px));
+                width: calc(min(510px, calc(100dvh - 190px)) / 2);
+                max-width: calc(100vw - 32px);
+                max-height: calc((100vw - 32px) * 2);
+                margin: 0 auto;
+            }
+
             #board {
-                width: 300px;
-                height: 600px;
+                width: 100%;
+                height: 100%;
+            }
+
+            .hamster-easter-egg {
+                width: 100%;
+                height: auto;
+                aspect-ratio: 1 / 1;
+                top: 50%;
+                transform: translateY(-50%);
+            }
+
+
+            /* 3. 하단 모바일 조작 컨트롤 */
+
+            .controls {
+                margin-top: 4px;
+                gap: 4px;
+                width: 100%;
+                max-width: calc(min(510px, calc(100dvh - 190px)) / 2 + 60px);
+                min-width: 200px;
+            }
+
+            .controls button {
+                min-height: 34px;
+                padding: 2px;
+                font-size: 12px;
             }
 
         }
@@ -398,9 +578,6 @@
 
 
 <body>
-
-    <!-- 3000점 달성 시 햄스터 배경 -->
-    <div id="high-score-bg" class="high-score-bg"></div>
 
     <div class="game">
 
@@ -411,8 +588,17 @@
 
         <div class="game-board">
 
-            <canvas id="board" width="300" height="600">
-            </canvas>
+            <div class="board-frame">
+                <!-- 1. 배경 격자선 레이어 (z-index: 1) -->
+                <div class="board-bg"></div>
+
+                <!-- 2. 햄스터 이스터에그 (z-index: 2: 배경 위 & 블록 아래) -->
+                <img id="hamster-easter-egg" class="hamster-easter-egg" src="img_scorehigh.jpg" alt="easter egg">
+
+                <!-- 3. 테트리스 블록 캔버스 (z-index: 3: 최상단에서 블록 렌더링) -->
+                <canvas id="board" width="300" height="600">
+                </canvas>
+            </div>
 
 
             <!-- 모바일 조작 -->
@@ -450,76 +636,59 @@
 
         <div class="side">
 
-
             <div class="title">
                 RETRO<br>
                 TETRIS
             </div>
 
-
-            <div class="panel">
-
-                <div class="label">
-                    SCORE
+            <div class="side-content">
+                <div class="panel score-panel">
+                    <div class="label">
+                        SCORE
+                    </div>
+                    <div id="score" class="value">
+                        000000
+                    </div>
                 </div>
 
-                <div id="score" class="value">
-                    000000
+                <div class="panel next-panel">
+                    <div class="label">
+                        NEXT
+                    </div>
+                    <canvas id="next" width="100" height="100">
+                    </canvas>
                 </div>
 
-            </div>
-
-
-            <div class="panel">
-
-                <div class="label">
-                    LINES
+                <div class="panel lines-panel">
+                    <div class="label">
+                        LINES
+                    </div>
+                    <div id="lines" class="value">
+                        000
+                    </div>
                 </div>
 
-                <div id="lines" class="value">
-                    000
+                <div class="panel actions-panel">
+                    <div id="status" class="status">
+                        READY!
+                    </div>
+
+                    <button id="pause">
+                        PAUSE
+                    </button>
+
+                    <button id="restart">
+                        NEW GAME
+                    </button>
+
+                    <div class="help">
+                        ← → MOVE<br>
+                        ↓ DOWN<br>
+                        ↑ ROTATE<br>
+                        SPACE DROP<br>
+                        P PAUSE
+                    </div>
                 </div>
-
-            </div>
-
-
-            <div class="panel">
-
-                <div class="label">
-                    NEXT
-                </div>
-
-                <canvas id="next" width="100" height="100">
-                </canvas>
-
-
-                <div id="status" class="status">
-
-                    READY!
-
-                </div>
-
-
-                <button id="pause">
-                    PAUSE
-                </button>
-
-
-                <button id="restart">
-                    NEW GAME
-                </button>
-
-
-                <div class="help">
-
-                    ← → MOVE<br>
-                    ↓ DOWN<br>
-                    ↑ ROTATE<br>
-                    SPACE DROP<br>
-                    P PAUSE
-
-                </div>
-
             </div>
 
         </div>
@@ -657,7 +826,7 @@
 
         const ARR_INTERVAL = 50; // 반복 이동 간격 (ms)
 
-        let hamsterBgTriggered = false; // 3000점 햄스터 배경 트리거 여부
+        let hamsterEggTriggered = false; // 햄스터 이스터에그 발동 여부
 
 
         // ========================================
@@ -1394,14 +1563,14 @@
                     .padStart(3, "0");
 
 
-            // 3000점 이상 달성 시 햄스터 배경 애니메이션 (5초 페이드인, 5초 페이드아웃)
-            if (score >= 3000 && !hamsterBgTriggered) {
-                hamsterBgTriggered = true;
-                const bg = document.getElementById("high-score-bg");
-                if (bg) {
-                    bg.classList.remove("animate");
-                    void bg.offsetWidth; // 리플로우 강제하여 애니메이션 재시작 보장
-                    bg.classList.add("animate");
+            // 1000점 이상 달성 시 햄스터 이스터에그 발동 (배경 위 & 블록 아래, 5초 페이드인, 5초 페이드아웃)
+            if (score >= 1000 && !hamsterEggTriggered) {
+                hamsterEggTriggered = true;
+                const img = document.getElementById("hamster-easter-egg");
+                if (img) {
+                    img.classList.remove("animate");
+                    void img.offsetWidth; // 강제 리플로우로 애니메이션 재시작 보장
+                    img.classList.add("animate");
                 }
             }
 
@@ -1444,11 +1613,11 @@
 
             arrTimer = 0;
 
-            hamsterBgTriggered = false;
+            hamsterEggTriggered = false;
 
-            const bg = document.getElementById("high-score-bg");
-            if (bg) {
-                bg.classList.remove("animate");
+            const img = document.getElementById("hamster-easter-egg");
+            if (img) {
+                img.classList.remove("animate");
             }
 
 
@@ -1542,8 +1711,8 @@
                         100,
                         800 -
                         Math.floor(
-                            elapsedSec / 30
-                        ) * 50 -
+                            elapsedSec / 20
+                        ) * 55 -
                         Math.floor(
                             lines / 10
                         ) * 30
