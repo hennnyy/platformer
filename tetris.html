@@ -1626,6 +1626,19 @@
             "keydown",
             event => {
 
+                // 방향키 및 스페이스바 입력 시 PC 브라우저 스크롤 방지
+                if (
+                    [
+                        "ArrowUp",
+                        "ArrowDown",
+                        "ArrowLeft",
+                        "ArrowRight",
+                        " "
+                    ].includes(event.key)
+                ) {
+                    event.preventDefault();
+                }
+
                 switch (
                 event.key
                 ) {
@@ -1674,8 +1687,6 @@
 
 
                     case " ":
-
-                        event.preventDefault();
 
                         hardDrop();
 
