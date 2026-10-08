@@ -133,7 +133,7 @@
                     transparent 1px);
 
             background-size:
-                30px 30px;
+                10% 5%;
 
             pointer-events: none;
 
@@ -421,8 +421,8 @@
                 align-items: center;
                 justify-content: center;
 
-                width: 100%;
-                max-width: 360px;
+                width: fit-content;
+                max-width: 100vw;
                 height: 100%;
                 max-height: 100dvh;
 
@@ -435,7 +435,7 @@
             }
 
 
-            /* 1. 상단 정보 HUD (보드판 위로 배치) */
+            /* 1. 상단 정보 HUD (보드 너비에 딱 맞춤) */
 
             .side {
                 order: -1;
@@ -453,12 +453,15 @@
                 align-items: stretch;
                 justify-content: space-between;
                 gap: 4px;
+                /* 보드 프레임 너비와 1:1로 동일하게 정렬 */
                 width: 100%;
+                max-width: calc(min(510px, calc(100dvh - 190px)) / 2 + 12px);
+                margin: 0 auto;
             }
 
             .side-content .panel {
                 margin-bottom: 0;
-                padding: 4px;
+                padding: 4px 6px;
                 display: flex;
                 flex-direction: column;
                 justify-content: center;
@@ -468,7 +471,7 @@
             }
 
             .score-panel {
-                flex: 1.1;
+                flex: 1;
             }
 
             /* 다음 블록: 상단 중앙에 실시간 표시 */
@@ -478,18 +481,14 @@
             }
 
             .next-panel #next {
-                width: 40px;
-                height: 40px;
+                width: 38px;
+                height: 38px;
                 margin: 2px auto 0;
                 border-width: 1px;
             }
 
-            .lines-panel {
-                flex: 0.9;
-            }
-
             .actions-panel {
-                flex: 1.1;
+                flex: 1;
                 padding: 3px 4px !important;
             }
 
@@ -512,7 +511,7 @@
             }
 
             .label {
-                font-size: 6px;
+                font-size: 6.5px;
                 margin-bottom: 2px;
             }
 
@@ -521,7 +520,7 @@
             }
 
 
-            /* 2. 게임판: 각 디바이스 높이에 맞춰 자동 스케일링 (위아래 짤림 방지) */
+            /* 2. 게임판: 블록 10칸 범위에 딱 맞춤 (좌우 2칸 넓어짐 해결) */
 
             .game-board {
                 padding: 4px;
@@ -529,12 +528,13 @@
                 display: flex;
                 flex-direction: column;
                 align-items: center;
-                width: 100%;
+                width: fit-content;
                 box-sizing: border-box;
+                margin: 0 auto;
             }
 
             .board-frame {
-                /* 상단 HUD(~55px) + 컨트롤 버튼(~95px) + 패딩/여백 제외 후 1:2 비율 자동 맞춤 */
+                /* 상단 HUD + 컨트롤 버튼 제외 후 1:2 비율 자동 맞춤 */
                 height: min(510px, calc(100dvh - 190px));
                 width: calc(min(510px, calc(100dvh - 190px)) / 2);
                 max-width: calc(100vw - 32px);
@@ -556,14 +556,14 @@
             }
 
 
-            /* 3. 하단 모바일 조작 컨트롤 */
+            /* 3. 하단 모바일 조작 컨트롤 (보드 너비와 일치) */
 
             .controls {
                 margin-top: 4px;
                 gap: 4px;
                 width: 100%;
-                max-width: calc(min(510px, calc(100dvh - 190px)) / 2 + 60px);
-                min-width: 200px;
+                max-width: calc(min(510px, calc(100dvh - 190px)) / 2);
+                margin: 4px auto 0;
             }
 
             .controls button {
@@ -659,14 +659,7 @@
                     </canvas>
                 </div>
 
-                <div class="panel lines-panel">
-                    <div class="label">
-                        LINES
-                    </div>
-                    <div id="lines" class="value">
-                        000
-                    </div>
-                </div>
+
 
                 <div class="panel actions-panel">
                     <div id="status" class="status">
@@ -1556,11 +1549,16 @@
                     .padStart(6, "0");
 
 
-            document.getElementById(
-                "lines"
-            ).textContent =
-                String(lines)
-                    .padStart(3, "0");
+            const linesEl =
+                document.getElementById(
+                    "lines"
+                );
+
+            if (linesEl) {
+                linesEl.textContent =
+                    String(lines)
+                        .padStart(3, "0");
+            }
 
 
             // 1000점 이상 달성 시 햄스터 이스터에그 발동 (배경 위 & 블록 아래, 5초 페이드인, 5초 페이드아웃)
