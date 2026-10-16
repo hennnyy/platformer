@@ -719,8 +719,8 @@
                 <!-- 1. 배경 격자선 레이어 (z-index: 1) -->
                 <div class="board-bg"></div>
 
-                <!-- 2. 햄스터 이스터에그 (z-index: 2: 배경 위 & 블록 아래) -->
-                <img id="hamster-easter-egg" class="hamster-easter-egg" src="img_scorehigh.jpg" alt="easter egg">
+                <!-- 2. 이스터에그 (z-index: 2: 배경 위 & 블록 아래) -->
+                <img id="hamster-easter-egg" class="hamster-easter-egg" src="img_thumbsupddunge.png" alt="easter egg">
 
                 <!-- 3. 테트리스 블록 캔버스 (z-index: 3: 최상단에서 블록 렌더링) -->
                 <canvas id="board" width="300" height="600">
@@ -975,7 +975,19 @@
 
         const ARR_INTERVAL = 50; // 반복 이동 간격 (ms)
 
-        let hamsterEggTriggered = false; // 햄스터 이스터에그 발동 여부
+        let easterEgg1000Triggered = false; // 1000점 이스터에그 (뚱이 따봉)
+        let easterEgg3000Triggered = false; // 3000점 이스터에그 (고양이 따봉)
+        let easterEgg5000Triggered = false; // 5000점 이스터에그 (기존 햄스터)
+
+        function triggerEasterEgg(imageSrc) {
+            const img = document.getElementById("hamster-easter-egg");
+            if (img) {
+                img.src = imageSrc;
+                img.classList.remove("animate");
+                void img.offsetWidth; // 강제 리플로우로 애니메이션 재시작 보장
+                img.classList.add("animate");
+            }
+        }
 
 
         // ========================================
@@ -1718,15 +1730,19 @@
             }
 
 
-            // 1000점 이상 달성 시 햄스터 이스터에그 발동 (배경 위 & 블록 아래, 5초 페이드인, 5초 페이드아웃)
-            if (score >= 1000 && !hamsterEggTriggered) {
-                hamsterEggTriggered = true;
-                const img = document.getElementById("hamster-easter-egg");
-                if (img) {
-                    img.classList.remove("animate");
-                    void img.offsetWidth; // 강제 리플로우로 애니메이션 재시작 보장
-                    img.classList.add("animate");
-                }
+            // 점수별 이스터에그 발동 체크 (1000점: 뚱이, 3000점: 고양이, 5000점: 기존 햄스터)
+            if (score >= 5000 && !easterEgg5000Triggered) {
+                easterEgg1000Triggered = true;
+                easterEgg3000Triggered = true;
+                easterEgg5000Triggered = true;
+                triggerEasterEgg("img_scorehigh.jpg");
+            } else if (score >= 3000 && !easterEgg3000Triggered) {
+                easterEgg1000Triggered = true;
+                easterEgg3000Triggered = true;
+                triggerEasterEgg("img_thumbsupcat.png");
+            } else if (score >= 1000 && !easterEgg1000Triggered) {
+                easterEgg1000Triggered = true;
+                triggerEasterEgg("img_thumbsupddunge.png");
             }
 
         }
@@ -1768,11 +1784,14 @@
 
             arrTimer = 0;
 
-            hamsterEggTriggered = false;
+            easterEgg1000Triggered = false;
+            easterEgg3000Triggered = false;
+            easterEgg5000Triggered = false;
 
             const img = document.getElementById("hamster-easter-egg");
             if (img) {
                 img.classList.remove("animate");
+                img.src = "img_thumbsupddunge.png";
             }
 
 
