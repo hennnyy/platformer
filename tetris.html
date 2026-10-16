@@ -573,7 +573,134 @@
             }
 
         }
+
+        /* ─── 오버레이 공통 ─── */
+        #initials-overlay,
+        #ranking-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.88);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+
+        /* ─── 모달 박스 ─── */
+        #initials-modal,
+        #ranking-modal {
+            background: #171717;
+            border: 3px solid #f5d547;
+            box-shadow: 0 0 0 3px #090909, 0 12px 40px rgba(245, 213, 71, 0.2);
+            padding: 28px 32px;
+            text-align: center;
+            font-family: "Press Start 2P", monospace;
+            min-width: 260px;
+            max-width: 90vw;
+        }
+
+        .modal-title {
+            color: #f5d547;
+            font-size: 16px;
+            text-shadow: 3px 3px 0 #6e5d00;
+            margin-bottom: 20px;
+        }
+
+        .modal-score-label {
+            color: #888;
+            font-size: 8px;
+            margin-bottom: 6px;
+        }
+
+        #modal-score-value {
+            color: #f5d547;
+            font-size: 24px;
+            text-shadow: 2px 2px 0 #594d00;
+            margin-bottom: 8px;
+        }
+
+        .modal-rank-label {
+            color: #67d46e;
+            font-size: 8px;
+            margin-bottom: 20px;
+            min-height: 14px;
+        }
+
+        .modal-label {
+            display: block;
+            color: #888;
+            font-size: 8px;
+            margin-bottom: 10px;
+        }
+
+        #initials-input {
+            width: 110px;
+            padding: 8px 4px;
+            background: #050505;
+            border: 2px solid #f5d547;
+            color: #f5d547;
+            font-family: "Press Start 2P", monospace;
+            font-size: 20px;
+            text-align: center;
+            text-transform: uppercase;
+            letter-spacing: 8px;
+            outline: none;
+            margin-bottom: 20px;
+            caret-color: #f5d547;
+        }
+
+        #initials-input:focus {
+            box-shadow: 0 0 8px rgba(245, 213, 71, 0.5);
+        }
+
+        /* ─── 랭킹 목록 ─── */
+        #ranking-list {
+            list-style: none;
+            padding: 0;
+            margin: 0 0 20px 0;
+            text-align: left;
+        }
+
+        #ranking-list li {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 6px 4px;
+            font-size: 9px;
+            border-bottom: 1px solid #2a2a2a;
+            color: #ccc;
+        }
+
+        #ranking-list li:first-child {
+            color: #f5d547;
+        }
+
+        #ranking-list li.highlight {
+            color: #67d46e;
+            background: rgba(103, 212, 110, 0.06);
+        }
+
+        .rank-pos {
+            color: #555;
+            min-width: 20px;
+        }
+
+        .rank-init {
+            min-width: 36px;
+        }
+
+        .rank-score {
+            min-width: 70px;
+            text-align: right;
+        }
+
+        .rank-date {
+            color: #444;
+            font-size: 7px;
+        }
     </style>
+    <!-- Supabase SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 
 
@@ -688,8 +815,37 @@
 
     </div>
 
+    <!-- 이니셜 입력 오버레이 -->
+    <div id="initials-overlay" style="display:none">
+        <div id="initials-modal">
+            <div class="modal-title">GAME OVER</div>
+            <div class="modal-score-label">YOUR SCORE</div>
+            <div id="modal-score-value">000000</div>
+            <div class="modal-rank-label" id="modal-rank-label"></div>
+            <label class="modal-label" for="initials-input">ENTER INITIALS</label>
+            <input id="initials-input" type="text" maxlength="3" autocomplete="off" spellcheck="false"
+                placeholder="AAA">
+            <button id="save-score-btn">SAVE</button>
+        </div>
+    </div>
+
+    <!-- 랭킹 오버레이 -->
+    <div id="ranking-overlay" style="display:none">
+        <div id="ranking-modal">
+            <div class="modal-title">HIGH SCORES</div>
+            <ol id="ranking-list"></ol>
+            <button id="close-ranking-btn">NEW GAME</button>
+        </div>
+    </div>
+
 
     <script>
+        // ========================================
+        // Supabase 초기화 (본인 값으로 교체)
+        // ========================================
+        const SUPABASE_URL = "https://etootzfhexkmxqdnycnh.supabase.co";  // ← 본인 URL
+        const SUPABASE_ANON = "sb_publishable_yq5nFvdOceqxMfrJrhYFmw_ANcapMk3";          // ← 본인 anon key
+        const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 
         // ========================================
         // 기본 설정
@@ -1339,6 +1495,7 @@
                     "status"
                 ).textContent =
                     "GAME OVER";
+                showInitialsModal();
 
             }
 
@@ -2007,6 +2164,142 @@
 
                 }
             );
+        // ========================================
+        // Supabase 글로벌 랭킹 함수
+        // ========================================
+
+        const MAX_RANK = 10;
+
+        /** Supabase에 점수 저장 */
+        async function saveRanking(initials, score) {
+            const { error } = await _supabase
+                .from("rankings")
+                .insert({
+                    initials: initials.toUpperCase().slice(0, 3),
+                    score,
+                    date: new Date().toLocaleDateString("ko-KR")
+                });
+
+            if (error) {
+                console.error("저장 실패:", error.message);
+            }
+        }
+
+        /** Supabase에서 상위 랭킹 로드 */
+        async function loadRankings() {
+            const { data, error } = await _supabase
+                .from("rankings")
+                .select("initials, score, date")
+                .order("score", { ascending: false })
+                .limit(MAX_RANK);
+
+            if (error) {
+                console.error("로드 실패:", error.message);
+                return [];
+            }
+
+            return data || [];
+        }
+        // ========================================
+        // 이니셜 입력 모달
+        // ========================================
+
+        async function showInitialsModal() {
+            // 현재 랭킹 미리 로드해서 순위 표시
+            const rankings = await loadRankings();
+            const rank = rankings.findIndex(r => r.score < score) + 1 || rankings.length + 1;
+
+            document.getElementById("modal-score-value").textContent =
+                String(score).padStart(6, "0");
+
+            const rankEl = document.getElementById("modal-rank-label");
+            if (rank === 1 && (rankings.length === 0 || score > rankings[0].score)) {
+                rankEl.textContent = "★ NEW RECORD!";
+            } else if (rank <= MAX_RANK) {
+                rankEl.textContent = `RANK #${rank}`;
+            } else {
+                rankEl.textContent = "TOP 10 OUTSIDE";
+            }
+
+            const overlay = document.getElementById("initials-overlay");
+            overlay.style.display = "flex";
+
+            const input = document.getElementById("initials-input");
+            input.value = "";
+            setTimeout(() => input.focus(), 100);
+        }
+
+        // ========================================
+        // 랭킹 모달
+        // ========================================
+
+        async function showRankingModal(newScore) {
+            const list = document.getElementById("ranking-list");
+            list.innerHTML = "<li style='color:#555;font-size:8px;text-align:center;list-style:none'>불러오는 중...</li>";
+
+            document.getElementById("initials-overlay").style.display = "none";
+            document.getElementById("ranking-overlay").style.display = "flex";
+
+            const rankings = await loadRankings();
+            list.innerHTML = "";
+
+            if (rankings.length === 0) {
+                list.innerHTML = "<li style='color:#555;font-size:8px;list-style:none'>기록 없음</li>";
+                return;
+            }
+
+            rankings.forEach((entry, i) => {
+                const li = document.createElement("li");
+                if (entry.score === newScore) li.classList.add("highlight");
+
+                li.innerHTML = `
+                        <span class="rank-pos">#${i + 1}</span>
+                        <span class="rank-init">${entry.initials || "---"}</span>
+                        <span class="rank-score">${String(entry.score).padStart(6, "0")}</span>
+                        <span class="rank-date">${entry.date || ""}</span>
+                    `;
+                list.appendChild(li);
+            });
+        }
+
+        // ========================================
+        // SAVE 버튼
+        // ========================================
+
+        document.getElementById("save-score-btn").addEventListener("click", async () => {
+            const btn = document.getElementById("save-score-btn");
+            const input = document.getElementById("initials-input");
+            const initials = input.value.trim().toUpperCase().slice(0, 3) || "???";
+
+            btn.textContent = "SAVING...";
+            btn.disabled = true;
+
+            await saveRanking(initials, score);
+            await showRankingModal(score);
+
+            btn.textContent = "SAVE";
+            btn.disabled = false;
+        });
+
+        // Enter 키로도 저장
+        document.getElementById("initials-input").addEventListener("keydown", e => {
+            if (e.key === "Enter") document.getElementById("save-score-btn").click();
+        });
+
+        // 영문자만 입력 허용
+        document.getElementById("initials-input").addEventListener("input", e => {
+            e.target.value = e.target.value.replace(/[^a-zA-Z]/g, "").toUpperCase();
+        });
+
+        // NEW GAME 버튼
+        document.getElementById("close-ranking-btn").addEventListener("click", () => {
+            document.getElementById("ranking-overlay").style.display = "none";
+            restart();
+        });
+
+
+
+
 
 
         // 게임 내 더블탭 화면 확대 방지
