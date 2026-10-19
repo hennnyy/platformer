@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 
     <title>RETRO TETRIS</title>
 
@@ -408,16 +408,19 @@
         }
 
 
-        /* 모바일: 100dvh 맞춤 반응형 레이아웃 (스크롤 없음 & NEXT 블록 상단 배치) */
+        /* 모바일: 100svh 맞춤 반응형 레이아웃 (Safari 하단 툴바 및 safe-area 대응, 스크롤 지원) */
 
         @media (max-width: 650px) {
 
             body {
-                height: 100dvh;
-                max-height: 100dvh;
-                overflow: hidden;
+                min-height: 100vh;
+                min-height: 100svh;
+                height: auto;
+                overflow-x: hidden;
+                overflow-y: auto;
+                -webkit-overflow-scrolling: touch;
 
-                padding: 4px;
+                padding: 4px 4px calc(6px + env(safe-area-inset-bottom, 12px)) 4px;
                 box-sizing: border-box;
 
                 display: flex;
@@ -434,8 +437,9 @@
 
                 width: fit-content;
                 max-width: 100vw;
-                height: 100%;
-                max-height: 100dvh;
+                height: auto;
+                max-height: none;
+                margin: auto;
 
                 padding: 6px;
                 gap: 4px;
@@ -466,13 +470,14 @@
                 gap: 4px;
                 /* 보드 프레임 너비와 1:1로 동일하게 정렬 */
                 width: 100%;
-                max-width: calc(min(480px, calc(100dvh - 235px)) / 2 + 12px);
+                max-width: calc(min(390px, calc(100vh - 290px - env(safe-area-inset-bottom, 16px))) / 2 + 12px);
+                max-width: calc(min(390px, calc(100svh - 290px - env(safe-area-inset-bottom, 16px))) / 2 + 12px);
                 margin: 0 auto;
             }
 
             .side-content .panel {
                 margin-bottom: 0;
-                padding: 4px 6px;
+                padding: 4px 5px;
                 display: flex;
                 flex-direction: column;
                 justify-content: center;
@@ -489,13 +494,13 @@
             .keep-panel,
             .next-panel {
                 flex: 0 0 auto;
-                padding: 3px 5px !important;
+                padding: 3px 4px !important;
             }
 
             .keep-panel #keep,
             .next-panel #next {
-                width: 36px;
-                height: 36px;
+                width: 34px;
+                height: 34px;
                 margin: 2px auto 0;
                 border-width: 1px;
             }
@@ -533,7 +538,7 @@
             }
 
 
-            /* 2. 게임판: 블록 10칸 범위에 딱 맞춤 */
+            /* 2. 게임판: Safari 하단 툴바(약 50px) + safe-area 고려하여 1:2 비율 자동 맞춤 */
 
             .game-board {
                 padding: 4px;
@@ -547,9 +552,11 @@
             }
 
             .board-frame {
-                /* 상단 HUD + 컨트롤 버튼 제외 후 1:2 비율 자동 맞춤 */
-                height: min(480px, calc(100dvh - 235px));
-                width: calc(min(480px, calc(100dvh - 235px)) / 2);
+                /* Safari 툴바 및 컨트롤 버튼(3행 * 45px) 제외 후 화면 안에 딱 맞춤 */
+                height: min(390px, calc(100vh - 290px - env(safe-area-inset-bottom, 16px)));
+                height: min(390px, calc(100svh - 290px - env(safe-area-inset-bottom, 16px)));
+                width: calc(min(390px, calc(100vh - 290px - env(safe-area-inset-bottom, 16px))) / 2);
+                width: calc(min(390px, calc(100svh - 290px - env(safe-area-inset-bottom, 16px))) / 2);
                 max-width: calc(100vw - 32px);
                 max-height: calc((100vw - 32px) * 2);
                 margin: 0 auto;
@@ -569,13 +576,14 @@
             }
 
 
-            /* 3. 하단 모바일 조작 컨트롤 (보드 너비와 일치) */
+            /* 3. 하단 모바일 조작 컨트롤 (Safari 툴바 위에 온전히 표시) */
 
             .controls {
                 margin-top: 4px;
                 gap: 4px;
                 width: 100%;
-                max-width: calc(min(480px, calc(100dvh - 235px)) / 2);
+                max-width: calc(min(390px, calc(100vh - 290px - env(safe-area-inset-bottom, 16px))) / 2);
+                max-width: calc(min(390px, calc(100svh - 290px - env(safe-area-inset-bottom, 16px))) / 2);
                 margin: 4px auto 0;
             }
 
