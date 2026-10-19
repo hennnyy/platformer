@@ -3,7 +3,8 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 
     <title>RETRO TETRIS</title>
 
@@ -1479,18 +1480,6 @@
                 currentPiece &&
                 !gameOver
             ) {
-
-                const isGrounded =
-                    collision(currentPiece, 0, 1);
-
-                if (isGrounded) {
-                    // 바닥/블록에 닿은 1.5초 동안 조작 가능 상태임을 알리는 부드러운 점멸 피드백
-                    ctx.globalAlpha =
-                        Math.floor(lockTimer / 120) % 2 === 0
-                            ? 0.75
-                            : 1.0;
-                }
-
                 for (
                     let y = 0;
                     y <
@@ -1933,6 +1922,7 @@
         // 바닥 접촉 시 조작 리셋 헬퍼 (1.5초 락 딜레이 갱신)
         // ========================================
 
+
         function resetLockOnAction() {
 
             if (
@@ -1940,13 +1930,8 @@
                 collision(currentPiece, 0, 1)
             ) {
 
-                // 바닥/블록에 닿았을 때도 1.5초 딜레이를 갱신하여 회전 및 이동 조작 가능 (무한 지연 방지 최대 15회)
-                if (lockResetCount < MAX_LOCK_RESETS) {
-
-                    lockTimer = 0;
-                    lockResetCount++;
-
-                }
+                // 이미 바닥/블록에 닿았다면 타이머를 초기화하지 않음
+                // 최초 접촉 시점부터 1.5초 후 블록 고정
 
             } else {
 
@@ -1956,6 +1941,7 @@
             }
 
         }
+
 
 
         // ========================================
