@@ -250,9 +250,10 @@
         }
 
 
-        /* NEXT */
+        /* NEXT & KEEP */
 
-        #next {
+        #next,
+        #keep {
             display: block;
 
             width: 100px;
@@ -368,32 +369,42 @@
         .controls button {
             margin: 0;
 
-            min-height: 40px;
+            min-height: 45px;
+            font-size: 13px;
         }
 
-
-        .controls button:nth-child(1) {
+        .controls button[data-action="rotate"] {
             grid-column: 2;
+            grid-row: 1;
         }
 
-
-        .controls button:nth-child(2) {
-            grid-column: 1;
-        }
-
-
-        .controls button:nth-child(3) {
-            grid-column: 2;
-        }
-
-
-        .controls button:nth-child(4) {
+        .controls button[data-action="keep"] {
             grid-column: 3;
+            grid-row: 1;
+            font-size: 9px;
+            color: #67d46e;
+            border-color: #3e7b45;
+            background: #17261a;
         }
 
+        .controls button[data-action="left"] {
+            grid-column: 1;
+            grid-row: 2;
+        }
 
-        .controls button:nth-child(5) {
+        .controls button[data-action="down"] {
             grid-column: 2;
+            grid-row: 2;
+        }
+
+        .controls button[data-action="right"] {
+            grid-column: 3;
+            grid-row: 2;
+        }
+
+        .controls button[data-action="drop"] {
+            grid-column: 2;
+            grid-row: 3;
         }
 
 
@@ -455,7 +466,7 @@
                 gap: 4px;
                 /* 보드 프레임 너비와 1:1로 동일하게 정렬 */
                 width: 100%;
-                max-width: calc(min(510px, calc(100dvh - 190px)) / 2 + 12px);
+                max-width: calc(min(480px, calc(100dvh - 235px)) / 2 + 12px);
                 margin: 0 auto;
             }
 
@@ -474,15 +485,17 @@
                 flex: 1;
             }
 
-            /* 다음 블록: 상단 중앙에 실시간 표시 */
+            /* KEEP & NEXT 블록: 상단에 실시간 표시 */
+            .keep-panel,
             .next-panel {
                 flex: 0 0 auto;
-                padding: 3px 6px !important;
+                padding: 3px 5px !important;
             }
 
+            .keep-panel #keep,
             .next-panel #next {
-                width: 38px;
-                height: 38px;
+                width: 36px;
+                height: 36px;
                 margin: 2px auto 0;
                 border-width: 1px;
             }
@@ -520,7 +533,7 @@
             }
 
 
-            /* 2. 게임판: 블록 10칸 범위에 딱 맞춤 (좌우 2칸 넓어짐 해결) */
+            /* 2. 게임판: 블록 10칸 범위에 딱 맞춤 */
 
             .game-board {
                 padding: 4px;
@@ -535,8 +548,8 @@
 
             .board-frame {
                 /* 상단 HUD + 컨트롤 버튼 제외 후 1:2 비율 자동 맞춤 */
-                height: min(510px, calc(100dvh - 190px));
-                width: calc(min(510px, calc(100dvh - 190px)) / 2);
+                height: min(480px, calc(100dvh - 235px));
+                width: calc(min(480px, calc(100dvh - 235px)) / 2);
                 max-width: calc(100vw - 32px);
                 max-height: calc((100vw - 32px) * 2);
                 margin: 0 auto;
@@ -562,14 +575,18 @@
                 margin-top: 4px;
                 gap: 4px;
                 width: 100%;
-                max-width: calc(min(510px, calc(100dvh - 190px)) / 2);
+                max-width: calc(min(480px, calc(100dvh - 235px)) / 2);
                 margin: 4px auto 0;
             }
 
             .controls button {
-                min-height: 34px;
+                min-height: 45px;
                 padding: 2px;
-                font-size: 12px;
+                font-size: 13px;
+            }
+
+            .controls button[data-action="keep"] {
+                font-size: 9px;
             }
 
         }
@@ -736,6 +753,10 @@
                     ▲
                 </button>
 
+                <button data-action="keep">
+                    KEEP
+                </button>
+
                 <button data-action="left">
                     ◀
                 </button>
@@ -778,6 +799,14 @@
                     </div>
                 </div>
 
+                <div class="panel keep-panel">
+                    <div class="label">
+                        KEEP
+                    </div>
+                    <canvas id="keep" width="100" height="100">
+                    </canvas>
+                </div>
+
                 <div class="panel next-panel">
                     <div class="label">
                         NEXT
@@ -806,6 +835,7 @@
                         ↓ DOWN<br>
                         ↑ ROTATE<br>
                         SPACE DROP<br>
+                        C / SHIFT KEEP<br>
                         P PAUSE
                     </div>
                 </div>
@@ -863,6 +893,13 @@
 
         const nextCtx =
             nextCanvas.getContext("2d");
+
+
+        const keepCanvas =
+            document.getElementById("keep");
+
+        const keepCtx =
+            keepCanvas ? keepCanvas.getContext("2d") : null;
 
 
         const COLS = 10;
@@ -950,6 +987,10 @@
 
         let nextPiece;
 
+        let keepPiece = null;
+
+        let canKeep = true;
+
         let score = 0;
 
         let lines = 0;
@@ -1011,13 +1052,15 @@
         // 블록 생성
         // ========================================
 
-        function createPiece() {
+        function createPiece(forcedIndex) {
 
             const index =
-                Math.floor(
-                    Math.random() *
-                    shapes.length
-                );
+                forcedIndex !== undefined
+                    ? forcedIndex
+                    : Math.floor(
+                        Math.random() *
+                        shapes.length
+                    );
 
 
             const shape =
@@ -1040,7 +1083,10 @@
                 y: 0,
 
                 color:
-                    index + 1
+                    index + 1,
+
+                shapeIndex:
+                    index
 
             };
 
@@ -1355,6 +1401,132 @@
 
 
         // ========================================
+        // KEEP 그리기
+        // ========================================
+
+        function drawKeepPiece() {
+
+            if (!keepCtx) {
+                return;
+            }
+
+            keepCtx.clearRect(
+                0,
+                0,
+                100,
+                100
+            );
+
+            if (keepPiece === null) {
+                return;
+            }
+
+            const shape =
+                shapes[keepPiece];
+
+            const offsetX =
+                (4 - shape[0].length) / 2;
+
+            const offsetY =
+                (4 - shape.length) / 2;
+
+            for (
+                let y = 0;
+                y < shape.length;
+                y++
+            ) {
+
+                for (
+                    let x = 0;
+                    x < shape[y].length;
+                    x++
+                ) {
+
+                    if (shape[y][x]) {
+
+                        drawBlock(
+                            keepCtx,
+                            offsetX + x,
+                            offsetY + y,
+                            25,
+                            keepPiece + 1
+                        );
+
+                    }
+
+                }
+
+            }
+
+        }
+
+
+        // ========================================
+        // 블록 킵 (HOLD / KEEP)
+        // ========================================
+
+        function keepCurrentPiece() {
+
+            if (
+                paused ||
+                gameOver ||
+                !canKeep ||
+                !currentPiece
+            ) {
+                return;
+            }
+
+            const currentShapeIndex =
+                currentPiece.shapeIndex;
+
+            if (keepPiece === null) {
+
+                // 킵된 블록이 없을 때: 현재 블록을 킵하고 다음 블록 스폰
+                keepPiece =
+                    currentShapeIndex;
+
+                spawnPiece();
+
+            } else {
+
+                // 이미 킵된 블록 A가 있고 현재 B를 킵하면 서로 교환
+                const swapIndex =
+                    keepPiece;
+
+                keepPiece =
+                    currentShapeIndex;
+
+                currentPiece =
+                    createPiece(swapIndex);
+
+                if (
+                    collision(currentPiece)
+                ) {
+
+                    gameOver = true;
+
+                    document.getElementById(
+                        "status"
+                    ).textContent =
+                        "GAME OVER";
+
+                    showInitialsModal();
+
+                }
+
+            }
+
+            // 한 번 킵하면 다음 블록이 고정될 때까지 재교환 제한
+            canKeep = false;
+            dropTimer = 0;
+
+            drawKeepPiece();
+            drawBoard();
+
+        }
+
+
+        // ========================================
         // 블록 고정
         // ========================================
 
@@ -1464,12 +1636,48 @@
                     100,
                     300,
                     500,
-                    800
+                    1500 // 4줄 한번에 클리어(테트리스) 보너스 점수 대폭 상향 (800 -> 1500)
                 ];
 
 
                 score +=
-                    scores[count] || 1000;
+                    scores[count] || 1500;
+
+
+                if (count === 4) {
+
+                    const statusEl =
+                        document.getElementById("status");
+
+                    if (statusEl && !gameOver) {
+
+                        statusEl.textContent =
+                            "★ TETRIS! +1500 ★";
+
+                        statusEl.style.color =
+                            "#ffe13b";
+
+                        setTimeout(() => {
+
+                            if (
+                                !gameOver &&
+                                !paused &&
+                                statusEl.textContent.includes("TETRIS")
+                            ) {
+
+                                statusEl.textContent =
+                                    "PLAYING";
+
+                                statusEl.style.color =
+                                    "#67d46e";
+
+                            }
+
+                        }, 1200);
+
+                    }
+
+                }
 
 
                 updateInfo();
@@ -1700,6 +1908,8 @@
 
             clearLines();
 
+            canKeep = true;
+
             spawnPiece();
 
         }
@@ -1766,6 +1976,13 @@
                 null;
 
 
+            keepPiece =
+                null;
+
+            canKeep =
+                true;
+
+
             score = 0;
 
             lines = 0;
@@ -1812,6 +2029,8 @@
             spawnPiece();
 
             drawBoard();
+
+            drawKeepPiece();
 
         }
 
@@ -2029,6 +2248,21 @@
                         break;
 
 
+                    case "c":
+
+                    case "C":
+
+                    case "Shift":
+
+                    case "k":
+
+                    case "K":
+
+                        keepCurrentPiece();
+
+                        break;
+
+
                     case " ":
 
                         hardDrop();
@@ -2093,6 +2327,8 @@
                 arrTimer = 0;
             } else if (action === "rotate") {
                 rotatePiece();
+            } else if (action === "keep") {
+                keepCurrentPiece();
             } else if (action === "drop") {
                 hardDrop();
             }
