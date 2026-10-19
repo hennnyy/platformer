@@ -623,8 +623,10 @@
             width: 380px;
             max-width: 92vw;
             box-sizing: border-box;
-            max-height: 90vh;
+            max-height: 85vh;
+            max-height: 85svh;
             overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
         }
 
         .notice-title {
@@ -1027,6 +1029,13 @@
                         스마트폰에서도 더 쉽게 터치할 수 있도록 조작 버튼 크기를 큼직하고 시원하게 개선했습니다.
                     </div>
                 </div>
+
+                <div class="notice-item">
+                    <div class="notice-item-title">⏱️ 블록 착지 지연 (1.5초) 추가</div>
+                    <div class="notice-item-desc">
+                        블록이 바닥에 닿은 후 바로 굳지 않고 <strong>1.5초</strong> 동안 회전하거나 좌우로 움직여 원하는 위치에 맞출 수 있습니다.
+                    </div>
+                </div>
             </div>
 
             <div class="notice-actions">
@@ -1171,6 +1180,12 @@
         let paused = false;
 
         let dropTimer = 0;
+
+        // 블록 바닥/장애물 접촉 후 고정 딜레이 (1.5초)
+        const LOCK_DELAY = 1500;
+        let lockTimer = 0;
+        const MAX_LOCK_RESETS = 15; // 바닥 조작 시 무한 지연 방지 최대 리셋 횟수
+        let lockResetCount = 0;
 
         let lastTime = 0;
 
@@ -1465,6 +1480,17 @@
                 !gameOver
             ) {
 
+                const isGrounded =
+                    collision(currentPiece, 0, 1);
+
+                if (isGrounded) {
+                    // 바닥/블록에 닿은 1.5초 동안 조작 가능 상태임을 알리는 부드러운 점멸 피드백
+                    ctx.globalAlpha =
+                        Math.floor(lockTimer / 120) % 2 === 0
+                            ? 0.75
+                            : 1.0;
+                }
+
                 for (
                     let y = 0;
                     y <
@@ -1497,6 +1523,8 @@
                     }
 
                 }
+
+                ctx.globalAlpha = 1.0;
 
             }
 
@@ -1690,6 +1718,8 @@
             // 한 번 킵하면 다음 블록이 고정될 때까지 재교환 제한
             canKeep = false;
             dropTimer = 0;
+            lockTimer = 0;
+            lockResetCount = 0;
 
             drawKeepPiece();
             drawBoard();
@@ -1891,7 +1921,39 @@
             }
 
 
+            lockTimer = 0;
+            lockResetCount = 0;
+
             drawNextPiece();
+
+        }
+
+
+        // ========================================
+        // 바닥 접촉 시 조작 리셋 헬퍼 (1.5초 락 딜레이 갱신)
+        // ========================================
+
+        function resetLockOnAction() {
+
+            if (
+                currentPiece &&
+                collision(currentPiece, 0, 1)
+            ) {
+
+                // 바닥/블록에 닿았을 때도 1.5초 딜레이를 갱신하여 회전 및 이동 조작 가능 (무한 지연 방지 최대 15회)
+                if (lockResetCount < MAX_LOCK_RESETS) {
+
+                    lockTimer = 0;
+                    lockResetCount++;
+
+                }
+
+            } else {
+
+                lockTimer = 0;
+                lockResetCount = 0;
+
+            }
 
         }
 
@@ -1917,6 +1979,7 @@
             ) {
 
                 currentPiece.x--;
+                resetLockOnAction();
 
             }
 
@@ -1940,6 +2003,7 @@
             ) {
 
                 currentPiece.x++;
+                resetLockOnAction();
 
             }
 
@@ -1947,7 +2011,7 @@
 
 
         // ========================================
-        // 아래 이동
+        // 아래 이동 (소프트 드롭)
         // ========================================
 
         function moveDown() {
@@ -1967,21 +2031,22 @@
             ) {
 
                 currentPiece.y++;
+                dropTimer = 0;
+                lockTimer = 0;
+                lockResetCount = 0;
 
             } else {
 
-                lockPiece();
+                // 바닥/블록에 닿았을 때는 바로 고정하지 않고 1.5초(LOCK_DELAY) 지연 후 고정
+                dropTimer = 0;
 
             }
-
-
-            dropTimer = 0;
 
         }
 
 
         // ========================================
-        // 즉시 낙하
+        // 즉시 낙하 (하드 드롭)
         // ========================================
 
         function hardDrop() {
@@ -2008,6 +2073,8 @@
             lockPiece();
 
             dropTimer = 0;
+            lockTimer = 0;
+            lockResetCount = 0;
 
         }
 
@@ -2059,6 +2126,7 @@
                     currentPiece.matrix =
                         rotated;
 
+                    resetLockOnAction();
 
                     return;
 
@@ -2080,6 +2148,9 @@
             clearLines();
 
             canKeep = true;
+
+            lockTimer = 0;
+            lockResetCount = 0;
 
             spawnPiece();
 
@@ -2163,6 +2234,10 @@
             paused = false;
 
             dropTimer = 0;
+
+            lockTimer = 0;
+
+            lockResetCount = 0;
 
             totalPlayTime = 0;
 
@@ -2289,6 +2364,32 @@
                 ) {
 
                     moveDown();
+
+                }
+
+
+                // 바닥 또는 다른 블록에 닿았을 때 1.5초(LOCK_DELAY) 동안 조작 가능 후 고정
+                if (
+                    currentPiece &&
+                    collision(currentPiece, 0, 1)
+                ) {
+
+                    lockTimer +=
+                        deltaTime;
+
+                    if (
+                        lockTimer >=
+                        LOCK_DELAY
+                    ) {
+
+                        lockPiece();
+
+                    }
+
+                } else {
+
+                    lockTimer = 0;
+                    lockResetCount = 0;
 
                 }
 
