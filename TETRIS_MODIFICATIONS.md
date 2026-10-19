@@ -1,6 +1,6 @@
 # 🎮 테트리스(Retro Tetris) 수정 및 기능 추가 보고서
 
-요청하신 3가지 요구사항에 대한 수정 및 기능 추가 작업이 모두 완료되었습니다.
+요청하신 테트리스 게임 수정, 신규 기능 추가 및 업데이트 공지 팝업 작업이 모두 완료되었습니다.
 
 ---
 
@@ -22,6 +22,11 @@
      - **PC 키보드**: `C` 키, `Shift` 키, `K` 키
      - **모바일**: 하단 조작 버튼 패널 상단 우측에 전용 `KEEP` 버튼 추가
    - **UI**: 상단 HUD에 실시간으로 보관된 블록을 표시하는 레트로 캔버스 패널(`KEEP`) 배치
+
+4. **업데이트 공지 팝업(모달) 추가**
+   - 게임에 접속했을 때 최신 업데이트 내역(KEEP 기능, 4줄 테트리스 보너스, 모바일 45px 버튼)을 직관적으로 확인할 수 있는 레트로 스타일 공지 모달을 제공합니다.
+   - 팝업이 떠 있는 동안에는 블록이 떨어지지 않고 일시정지(`READY!`) 상태를 유지하며, `START GAME` 버튼을 누르면 부드럽게 게임이 시작됩니다.
+   - `오늘 하루 보지 않기` 체크박스 옵션(로컬스토리지 24시간 저장)을 지원합니다.
 
 ---
 
@@ -84,6 +89,31 @@
 }
 ```
 
+#### 1-3. 업데이트 공지 팝업 스타일
+```css
+#notice-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.88);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 100;
+}
+
+#notice-modal {
+    background: #171717;
+    border: 3px solid #f5d547;
+    box-shadow: 0 0 0 3px #090909, 0 12px 40px rgba(245, 213, 71, 0.25);
+    padding: 24px 20px;
+    text-align: center;
+    font-family: "Press Start 2P", -apple-system, BlinkMacSystemFont, "Malgun Gothic", sans-serif;
+    width: 380px;
+    max-width: 92vw;
+    box-sizing: border-box;
+}
+```
+
 ---
 
 ### 2. HTML 마크업 수정
@@ -108,6 +138,25 @@
     <button data-action="down">▼</button>
     <button data-action="right">▶</button>
     <button data-action="drop">▼▼</button>
+</div>
+```
+
+#### 2-3. 업데이트 공지 모달 마크업
+```html
+<div id="notice-overlay" style="display:none">
+    <div id="notice-modal">
+        <div class="notice-title">★ UPDATE NOTICE ★</div>
+        <div class="notice-badge">VER 2.0 UPDATE</div>
+        <div class="notice-list">
+            ...
+        </div>
+        <div class="notice-actions">
+            <label class="notice-hide-today">
+                <input type="checkbox" id="notice-hide-checkbox"> 오늘 하루 보지 않기
+            </label>
+            <button id="close-notice-btn">START GAME</button>
+        </div>
+    </div>
 </div>
 ```
 
@@ -216,6 +265,24 @@ if (count === 4) {
 }
 ```
 
-#### 3-6. 입력 이벤트 매핑 (키보드 & 모바일 터치)
-- `keydown`: `'c'`, `'C'`, `'Shift'`, `'k'`, `'K'` 키 입력 시 `keepCurrentPiece()` 실행
-- `startAction(action)`: `action === "keep"` 터치 시 `keepCurrentPiece()` 실행
+#### 3-6. 공지 팝업 제어 및 로컬 스토리지 연동
+```javascript
+const NOTICE_STORAGE_KEY = "tetris_hide_notice_until";
+
+function checkNoticePopup() {
+    const hideUntil = localStorage.getItem(NOTICE_STORAGE_KEY);
+    const now = Date.now();
+
+    if (hideUntil && now < Number(hideUntil)) {
+        return;
+    }
+
+    const overlay = document.getElementById("notice-overlay");
+    if (overlay) {
+        overlay.style.display = "flex";
+        paused = true;
+        const statusEl = document.getElementById("status");
+        if (statusEl) statusEl.textContent = "READY!";
+    }
+}
+```
